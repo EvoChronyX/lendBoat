@@ -205,7 +205,6 @@ export async function initializeDummyData() {
       dailyRate: "450.00",
       description: "Luxury yacht perfect for sunset cruises and special occasions. Accommodates up to 12 guests.",
       imageUrl: "https://images.unsplash.com/photo-1540946485063-a40da27545f8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
-      rating: "4.8",
     });
 
     await storage.createBoat({
@@ -218,7 +217,6 @@ export async function initializeDummyData() {
       dailyRate: "320.00",
       description: "Professional fishing boat equipped with latest gear. Perfect for deep sea fishing adventures.",
       imageUrl: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
-      rating: "4.9",
     });
 
     await storage.createBoat({
@@ -231,7 +229,6 @@ export async function initializeDummyData() {
       dailyRate: "280.00",
       description: "High-performance speedboat for thrill seekers. Experience the ultimate adrenaline rush.",
       imageUrl: "https://images.unsplash.com/photo-1569263979104-865ab7cd8d13?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
-      rating: "4.7",
     });
 
     // Create sample owner request

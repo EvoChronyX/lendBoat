@@ -5,6 +5,7 @@ import { authService, authenticateToken, requireAdmin, requireOwner } from "./se
 import { emailService } from "./services/email";
 import { insertUserSchema, insertOwnerRequestSchema, insertBookingSchema } from "@shared/schema";
 import { z } from "zod";
+import "./types";
 
 // Ensure environment variables are loaded with proper fallbacks
 const JWT_SECRET = process.env.JWT_SECRET || process.env.AUTH_SECRET || process.env.CLERK_SECRET_KEY || 'fallback-secret-key';

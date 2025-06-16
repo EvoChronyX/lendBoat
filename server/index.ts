@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import "./types";
 
 // Load environment variables with better error handling
 const requiredEnvVars = ['DATABASE_URL'];

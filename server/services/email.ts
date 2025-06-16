@@ -6,7 +6,7 @@ const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@boatrental.com';
 // Create transporter based on available service
 const createTransporter = () => {
   if (SENDGRID_API_KEY) {
-    return nodemailer.createTransporter({
+    return nodemailer.createTransport({
       service: 'SendGrid',
       auth: {
         user: 'apikey',
@@ -20,7 +20,7 @@ const createTransporter = () => {
   const SMTP_USER = process.env.SMTP_USER || process.env.EMAIL_USER || '';
   const SMTP_PASS = process.env.SMTP_PASS || process.env.EMAIL_PASS || '';
   
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     host: SMTP_HOST,
     port: 587,
     secure: false,
