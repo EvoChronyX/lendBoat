@@ -164,7 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const requestData = insertOwnerRequestSchema.parse({
         ...req.body,
-        userId: req.user.id,
+        userId: req.user!.id,
       });
 
       const ownerRequest = await storage.createOwnerRequest(requestData);
