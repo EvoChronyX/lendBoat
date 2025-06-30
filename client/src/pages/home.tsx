@@ -1,6 +1,7 @@
 import Navigation from "@/components/navigation";
 import HeroSection from "@/components/hero-section";
 import FeaturedBoats from "@/components/featured-boats";
+import Testimonials from "@/components/testimonials";
 import { Anchor, Facebook, Twitter, Instagram, Phone, Mail, MapPin } from "lucide-react";
 
 export default function Home() {
@@ -9,6 +10,7 @@ export default function Home() {
       <Navigation />
       <HeroSection />
       <FeaturedBoats />
+      <Testimonials />
       
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
@@ -17,7 +19,7 @@ export default function Home() {
             <div>
               <div className="flex items-center mb-4">
                 <Anchor className="text-primary text-2xl mr-2" />
-                <span className="text-xl font-bold">BoatRental</span>
+                <span className="text-xl font-bold">lendBoat</span>
               </div>
               <p className="text-gray-400 mb-4">Your premier destination for boat rentals and marine adventures.</p>
               <div className="flex space-x-4">
@@ -57,14 +59,14 @@ export default function Home() {
               <h3 className="text-lg font-semibold mb-4">Contact Info</h3>
               <div className="space-y-2 text-gray-400">
                 <p className="flex items-center"><Phone className="mr-2 h-4 w-4" />+1 (555) 123-4567</p>
-                <p className="flex items-center"><Mail className="mr-2 h-4 w-4" />support@boatrental.com</p>
+                <p className="flex items-center"><Mail className="mr-2 h-4 w-4" />support@lendboat.com</p>
                 <p className="flex items-center"><MapPin className="mr-2 h-4 w-4" />123 Marina Blvd, Miami, FL</p>
               </div>
             </div>
           </div>
           
           <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 BoatRental. All rights reserved.</p>
+            <p>&copy; 2024 lendBoat. All rights reserved.</p>
           </div>
         </div>
       </footer>

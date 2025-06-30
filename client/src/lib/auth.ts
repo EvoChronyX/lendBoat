@@ -2,6 +2,7 @@ import { apiRequest } from "./queryClient";
 
 export interface User {
   id: number;
+  userId: number;
   firstName: string;
   lastName: string;
   email: string;
@@ -25,7 +26,7 @@ class AuthManager {
 
   private loadFromStorage() {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('token');
       const user = localStorage.getItem('auth_user');
       
       if (token && user) {
@@ -38,10 +39,10 @@ class AuthManager {
   private saveToStorage() {
     if (typeof window !== 'undefined') {
       if (this.token && this.user) {
-        localStorage.setItem('auth_token', this.token);
+        localStorage.setItem('token', this.token);
         localStorage.setItem('auth_user', JSON.stringify(this.user));
       } else {
-        localStorage.removeItem('auth_token');
+        localStorage.removeItem('token');
         localStorage.removeItem('auth_user');
       }
     }
@@ -51,7 +52,12 @@ class AuthManager {
     const response = await apiRequest('POST', '/api/auth/login', { email, password });
     const authData: AuthResponse = await response.json();
     
-    this.user = authData.user;
+    // Ensure both id and userId are set for compatibility
+    this.user = {
+      ...authData.user,
+      id: authData.user.id || authData.user.userId,
+      userId: authData.user.userId || authData.user.id
+    };
     this.token = authData.token;
     this.saveToStorage();
     
@@ -62,7 +68,12 @@ class AuthManager {
     const response = await apiRequest('POST', '/api/auth/admin-login', { email, password });
     const authData: AuthResponse = await response.json();
     
-    this.user = authData.user;
+    // Ensure both id and userId are set for compatibility
+    this.user = {
+      ...authData.user,
+      id: authData.user.id || authData.user.userId,
+      userId: authData.user.userId || authData.user.id
+    };
     this.token = authData.token;
     this.saveToStorage();
     
@@ -79,7 +90,12 @@ class AuthManager {
     const response = await apiRequest('POST', '/api/auth/signup', userData);
     const authData: AuthResponse = await response.json();
     
-    this.user = authData.user;
+    // Ensure both id and userId are set for compatibility
+    this.user = {
+      ...authData.user,
+      id: authData.user.id || authData.user.userId,
+      userId: authData.user.userId || authData.user.id
+    };
     this.token = authData.token;
     this.saveToStorage();
     
@@ -110,6 +126,11 @@ class AuthManager {
 
   isOwner(): boolean {
     return this.user?.role === 'owner';
+  }
+
+  // Refresh auth state from localStorage
+  refreshAuthState() {
+    this.loadFromStorage();
   }
 
   // Add Authorization header to requests

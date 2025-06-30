@@ -3,7 +3,8 @@ import jwt from 'jsonwebtoken';
 import { storage } from '../storage';
 import type { User } from '@shared/schema';
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.AUTH_SECRET || 'fallback-secret-key';
+import type { Secret } from 'jsonwebtoken';
+const JWT_SECRET: Secret = process.env.JWT_SECRET || process.env.AUTH_SECRET || 'fallback-secret-key';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 export interface AuthService {
@@ -26,7 +27,7 @@ class JWTAuthService implements AuthService {
   generateToken(user: User): string {
     return jwt.sign(
       { 
-        id: user.id, 
+        userId: user.userId, 
         email: user.email, 
         role: user.role 
       },
@@ -38,7 +39,7 @@ class JWTAuthService implements AuthService {
   async verifyToken(token: string): Promise<User | null> {
     try {
       const decoded = jwt.verify(token, JWT_SECRET) as any;
-      const user = await storage.getUserById(decoded.id);
+      const user = await storage.getUserById(decoded.userId);
       return user || null;
     } catch (error) {
       return null;
@@ -61,17 +62,28 @@ export const authenticateToken = async (req: any, res: any, next: any) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
+  console.log('Auth Header:', authHeader);
+  console.log('Token:', token);
+
   if (!token) {
+    console.warn('No token provided');
     return res.status(401).json({ message: 'Access token required' });
   }
 
-  const user = await authService.verifyToken(token);
-  if (!user) {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    console.log('Decoded JWT:', decoded);
+    const user = await storage.getUserById(decoded.userId);
+    console.log('User from DB:', user);
+    if (!user) {
+      return res.status(403).json({ message: 'Invalid or expired token (user not found)' });
+    }
+    req.user = user;
+    next();
+  } catch (err) {
+    console.error('JWT verification error:', err);
     return res.status(403).json({ message: 'Invalid or expired token' });
   }
-
-  req.user = user;
-  next();
 };
 
 // Middleware for admin authentication

@@ -1,33 +1,57 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, decimal, date, varchar, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
-  email: text("email").notNull().unique(),
+  userId: integer("user_id").notNull().unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  email: varchar("email").unique(),
   phone: text("phone"),
   password: text("password").notNull(),
-  role: text("role").notNull().default("user"), // user, owner, admin
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  role: varchar("role").notNull().default("user"),
+  profileImageUrl: varchar("profile_image_url"),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const ownerRequests = pgTable("owner_requests", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  userId: integer("user_id").references(() => users.userId),
+  // Personal Information
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull(),
+  phoneNumber: text("phone_number").notNull(),
+  address: text("address").notNull(),
+  governmentId: text("government_id").notNull(),
+  governmentIdNum: text("government_id_num"),
+  dateOfBirth: date("date_of_birth").notNull(),
+  // Business Information
   businessName: text("business_name").notNull(),
-  taxId: text("tax_id").notNull(),
-  businessLicense: text("business_license"), // file path
-  insuranceCertificate: text("insurance_certificate"), // file path
+  // Boat Information
   boatName: text("boat_name").notNull(),
   boatType: text("boat_type").notNull(),
   boatLength: integer("boat_length").notNull(),
   boatCapacity: integer("boat_capacity").notNull(),
-  marinaLocation: text("marina_location").notNull(),
-  dailyRate: decimal("daily_rate", { precision: 10, scale: 2 }).notNull(),
-  description: text("description").notNull(),
-  status: text("status").notNull().default("pending"), // pending, approved, rejected
+  registrationNumber: text("registration_number").notNull(),
+  hullIdentificationNumber: text("hull_identification_number").notNull(),
+  stateOfRegistration: text("state_of_registration").notNull(),
+  insuranceDetails: text("insurance_details").notNull(),
+  dailyRate: numeric("daily_rate", { precision: 10, scale: 2 }).notNull(),
+  purpose: text("purpose").notNull(),
+  // Owner system fields
+  ownerId: numeric("owner_id", { precision: 7, scale: 0 }).notNull(),
+  password: varchar("password").notNull(),
+  // Legacy fields
+  businessLicense: text("business_license"),
+  insuranceCertificate: text("insurance_certificate"),
+  marinaLocation: text("marina_location"),
+  description: text("description"),
+  status: text("status").notNull().default("pending"),
   adminNotes: text("admin_notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -35,55 +59,124 @@ export const ownerRequests = pgTable("owner_requests", {
 
 export const owners = pgTable("owners", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  userId: integer("user_id").references(() => users.userId),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull(),
+  phoneNumber: text("phone_number").notNull(),
+  address: text("address").notNull(),
+  governmentId: text("government_id").notNull(),
+  governmentIdNum: text("government_id_num"),
+  dateOfBirth: date("date_of_birth").notNull(),
   businessName: text("business_name").notNull(),
-  taxId: text("tax_id").notNull(),
-  isApproved: boolean("is_approved").default(false).notNull(),
+  boatName: text("boat_name").notNull(),
+  boatType: text("boat_type").notNull(),
+  boatLength: integer("boat_length").notNull(),
+  boatCapacity: integer("boat_capacity").notNull(),
+  registrationNumber: text("registration_number").notNull(),
+  hullIdentificationNumber: text("hull_identification_number").notNull(),
+  stateOfRegistration: text("state_of_registration").notNull(),
+  insuranceDetails: text("insurance_details").notNull(),
+  dailyRate: numeric("daily_rate", { precision: 10, scale: 2 }).notNull(),
+  purpose: text("purpose").notNull(),
+  businessLicense: text("business_license"),
+  insuranceCertificate: text("insurance_certificate"),
+  marinaLocation: text("marina_location"),
+  description: text("description"),
+  status: text("status").notNull().default("pending"),
+  adminNotes: text("admin_notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  ownerId: numeric("owner_id", { precision: 7, scale: 0 }).notNull(),
+  password: varchar("password").notNull(),
 });
 
 export const boats = pgTable("boats", {
-  id: serial("id").primaryKey(),
-  ownerId: integer("owner_id").references(() => owners.id).notNull(),
-  name: text("name").notNull(),
-  type: text("type").notNull(),
+  id: integer("id").primaryKey(),
+  ownerId: integer("owner_id").notNull(),
+  name: varchar("name").notNull(),
+  type: varchar("type").notNull(),
+  description: text("description").notNull(),
   length: integer("length").notNull(),
   capacity: integer("capacity").notNull(),
-  location: text("location").notNull(),
-  dailyRate: decimal("daily_rate", { precision: 10, scale: 2 }).notNull(),
-  description: text("description").notNull(),
+  dailyRate: numeric("daily_rate").notNull(),
+  location: varchar("location").notNull(),
+  images: text("images").array(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   imageUrl: text("image_url"),
-  rating: decimal("rating", { precision: 3, scale: 2 }).default("0").notNull(),
-  isActive: boolean("is_active").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  rating: numeric("rating").default("0"),
+  purpose: text("purpose").default("N/A"),
 });
 
 export const bookings = pgTable("bookings", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
-  boatId: integer("boat_id").references(() => boats.id).notNull(),
-  checkinDate: timestamp("checkin_date").notNull(),
-  checkoutDate: timestamp("checkout_date").notNull(),
-  guests: integer("guests").notNull(),
-  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  id: integer("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  boatId: integer("boat_id").notNull(),
+  totalAmount: numeric("total_amount").notNull(),
+  secretKey: varchar("secret_key", { length: 7 }),
+  paymentStatus: varchar("payment_status"),
+  stripePaymentIntentId: varchar("stripe_payment_intent_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  checkinDate: date("checkin_date").notNull(),
+  checkoutDate: date("checkout_date").notNull(),
+  guests: numeric("guests").notNull(),
   specialRequests: text("special_requests"),
-  status: text("status").notNull().default("pending"), // pending, confirmed, cancelled, completed
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  ownerStatus: text("owner_status"),
+  status: text("status"),
+});
+
+export const contacts = pgTable("contacts", {
+  id: integer("id").primaryKey(),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  email: varchar("email").notNull(),
+  subject: varchar("subject").notNull(),
+  message: text("message").notNull(),
+  status: varchar("status").default("1"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
+  userId: true,
   createdAt: true,
   role: true,
 });
 
-export const insertOwnerRequestSchema = createInsertSchema(ownerRequests).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  status: true,
-  adminNotes: true,
+// Custom schema for owner requests with new fields
+export const insertOwnerRequestSchema = z.object({
+  userId: z.number(),
+  // Personal Information
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Valid email is required"),
+  phoneNumber: z.string().min(1, "Phone number is required"),
+  address: z.string().min(1, "Address is required"),
+  governmentId: z.string().min(1, "Government ID is required"),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  // Business Information
+  businessName: z.string().min(1, "Business name is required"),
+  // Boat Information
+  boatName: z.string().min(1, "Boat name is required"),
+  boatType: z.string().min(1, "Boat type is required"),
+  boatLength: z.number().min(1, "Boat length is required"),
+  boatCapacity: z.number().min(1, "Boat capacity is required"),
+  registrationNumber: z.string().min(1, "Registration number is required"),
+  hullIdentificationNumber: z.string().min(1, "Hull identification number is required"),
+  stateOfRegistration: z.string().min(1, "State of registration is required"),
+  insuranceDetails: z.string().min(1, "Insurance details are required"),
+  dailyRate: z.string().min(1, "Daily rate is required"),
+  purpose: z.string().min(1, "Purpose is required"),
+  // Legacy fields (optional)
+  taxId: z.string().optional(),
+  businessLicense: z.string().optional(),
+  insuranceCertificate: z.string().optional(),
+  marinaLocation: z.string().optional(),
+  description: z.string().optional(),
 });
 
 export const insertBoatSchema = createInsertSchema(boats).omit({

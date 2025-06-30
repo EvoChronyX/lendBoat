@@ -2,6 +2,15 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import "./types";
+import { initializeDummyData } from "./storage";
+
+
+process.env.JWT_SECRET="sF8rLrZjdnUBVZ9E3mBtU8W6gFeTX2QwQrFjaVYPLD93gvYcZzM7vGpkRkMVRZTx"
+process.env.AUTH_SECRET="xr23MDk9LpB57QvTtMwz8nNbL1Cqg5ZfU6HyEo7Vm2AsWnBdKjRpYxFcGeHzNjLu"
+
+
+process.env.SENDGRID_API_KEY="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"
+process.env.EMAIL_API_KEY="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"
 
 // Load environment variables with better error handling
 const requiredEnvVars = ['DATABASE_URL'];
@@ -96,6 +105,9 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 
 (async () => {
   try {
+
+    await initializeDummyData();
+
     // Register all routes and initialize the server
     const server = await registerRoutes(app);
     

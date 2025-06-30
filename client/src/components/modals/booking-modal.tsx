@@ -6,9 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { authenticatedApiRequest } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { X } from "lucide-react";
+import { authenticatedApiRequest } from "@/lib/auth";
 
 interface Boat {
   id: number;
@@ -46,6 +46,39 @@ export default function BookingModal({ open, onClose, boat }: BookingModalProps)
 
   const { toast } = useToast();
 
+  const createCheckoutSessionMutation = useMutation({
+    mutationFn: async () => {
+      if (!boat) throw new Error("No boat selected");
+
+      const response = await authenticatedApiRequest("POST", "/api/stripe/create-checkout-session", {
+        boatId: boat.id,
+        checkinDate: formData.checkinDate,
+        checkoutDate: formData.checkoutDate,
+        guests: parseInt(formData.guests),
+        totalAmount: pricing.total,
+        specialRequests: formData.specialRequests || undefined,
+        boatName: boat.name,
+        location: boat.location,
+        dailyRate: boat.dailyRate,
+        boatType: boat.type,
+        capacity: boat.capacity,
+      });
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Redirect to Stripe checkout
+      window.location.href = data.url;
+    },
+    onError: (error) => {
+      toast({
+        title: "Payment Error",
+        description: error.message || "Failed to create checkout session",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Calculate pricing when dates change
   useEffect(() => {
     if (boat && formData.checkinDate && formData.checkoutDate) {
@@ -78,44 +111,6 @@ export default function BookingModal({ open, onClose, boat }: BookingModalProps)
       }
     }
   }, [boat, formData.checkinDate, formData.checkoutDate]);
-
-  const bookingMutation = useMutation({
-    mutationFn: async () => {
-      if (!boat) throw new Error("No boat selected");
-
-      const bookingData = {
-        boatId: boat.id,
-        checkinDate: new Date(formData.checkinDate).toISOString(),
-        checkoutDate: new Date(formData.checkoutDate).toISOString(),
-        guests: parseInt(formData.guests),
-        totalAmount: pricing.total.toFixed(2),
-        specialRequests: formData.specialRequests || null,
-      };
-
-      const response = await authenticatedApiRequest("POST", "/api/bookings", bookingData);
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Booking Confirmed!",
-        description: "Check your email for confirmation details.",
-      });
-      onClose();
-      setFormData({
-        checkinDate: "",
-        checkoutDate: "",
-        guests: "",
-        specialRequests: "",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Booking Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,7 +166,8 @@ export default function BookingModal({ open, onClose, boat }: BookingModalProps)
       return;
     }
 
-    bookingMutation.mutate();
+    // Create Stripe checkout session
+    createCheckoutSessionMutation.mutate();
   };
 
   const getTomorrowDate = () => {
@@ -319,10 +315,10 @@ export default function BookingModal({ open, onClose, boat }: BookingModalProps)
 
           <Button
             type="submit"
-            disabled={bookingMutation.isPending || pricing.days <= 0}
+            disabled={createCheckoutSessionMutation.isPending || pricing.days <= 0}
             className="w-full bg-primary hover:bg-primary/90 text-white py-3 rounded-lg font-medium"
           >
-            {bookingMutation.isPending ? "Confirming Booking..." : "Confirm Booking"}
+            {createCheckoutSessionMutation.isPending ? "Redirecting to Payment..." : "Proceed to Payment"}
           </Button>
         </form>
       </DialogContent>

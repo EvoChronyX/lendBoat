@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Checkbox } from "@/components/ui/checkbox";
 import { authManager } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { X } from "lucide-react";
+import { X, Eye, EyeOff } from "lucide-react";
 
 interface SignupModalProps {
   open: boolean;
@@ -24,6 +24,7 @@ export default function SignupModal({ open, onClose, onSwitchToLogin }: SignupMo
     password: "",
     agreeToTerms: false,
   });
+  const [showPassword, setShowPassword] = useState(false);
   
   const { toast } = useToast();
 
@@ -176,15 +177,24 @@ export default function SignupModal({ open, onClose, onSwitchToLogin }: SignupMo
             <Label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
               Password
             </Label>
-            <Input
-              id="password"
-              type="password"
-              required
-              value={formData.password}
-              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-              placeholder="Minimum 8 characters"
-              className="w-full"
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                required
+                value={formData.password}
+                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                placeholder="Minimum 8 characters"
+                className="w-full"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
           
           <div className="flex items-start space-x-2">

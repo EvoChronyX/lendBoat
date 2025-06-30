@@ -2,19 +2,63 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, Filter } from "lucide-react";
+
+interface SearchFilters {
+  boatType: string;
+  rating: string;
+  popularity: string;
+  purpose: string;
+}
 
 export default function HeroSection() {
-  const [searchData, setSearchData] = useState({
-    location: "",
-    checkin: "",
-    checkout: "",
+  const [searchData, setSearchData] = useState<SearchFilters>({
+    boatType: "",
+    rating: "",
+    popularity: "",
+    purpose: "",
   });
+
+  const boatTypes = [
+    "Yacht",
+    "Fishing Boat",
+    "Speedboat",
+    "Catamaran",
+    "Sailboat",
+    "Pontoon Boat",
+    "Jet Ski",
+    "Houseboat",
+    "Motorboat",
+    "Trawler"
+  ];
+
+  const purposes = [
+    "Party",
+    "Business Meeting",
+    "Travel",
+    "Fishing",
+    "Vacation",
+    "Wedding",
+    "Corporate Event",
+    "Family Trip",
+    "Romantic Getaway",
+    "Adventure"
+  ];
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Implement search functionality
-    console.log("Search data:", searchData);
+    // Store search filters in localStorage for the boats component to use
+    localStorage.setItem('boatSearchFilters', JSON.stringify(searchData));
+    
+    // Scroll to boats section
+    const boatsSection = document.getElementById("boats");
+    if (boatsSection) {
+      boatsSection.scrollIntoView({ behavior: "smooth" });
+    }
+    
+    // Trigger a custom event to notify the boats component
+    window.dispatchEvent(new CustomEvent('boatSearch', { detail: searchData }));
   };
 
   return (
@@ -40,45 +84,88 @@ export default function HeroSection() {
           </p>
           
           {/* Search Bar */}
-          <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-4xl mx-auto">
-            <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-5xl mx-auto">
+            <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
               <div>
-                <Label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
-                  Location
+                <Label htmlFor="boatType" className="block text-sm font-medium text-gray-700 mb-2">
+                  Boat Type
                 </Label>
-                <Input
-                  id="location"
-                  type="text"
-                  placeholder="Where do you want to sail?"
-                  value={searchData.location}
-                  onChange={(e) => setSearchData(prev => ({ ...prev, location: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-gray-900"
-                />
+                <Select
+                  value={searchData.boatType}
+                  onValueChange={(value) => setSearchData(prev => ({ ...prev, boatType: value }))}
+                >
+                  <SelectTrigger className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-gray-900">
+                    <SelectValue placeholder="Select boat type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {boatTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+              
               <div>
-                <Label htmlFor="checkin" className="block text-sm font-medium text-gray-700 mb-2">
-                  Check-in
+                <Label htmlFor="rating" className="block text-sm font-medium text-gray-700 mb-2">
+                  Rating
                 </Label>
-                <Input
-                  id="checkin"
-                  type="date"
-                  value={searchData.checkin}
-                  onChange={(e) => setSearchData(prev => ({ ...prev, checkin: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-gray-900"
-                />
+                <Select
+                  value={searchData.rating}
+                  onValueChange={(value) => setSearchData(prev => ({ ...prev, rating: value }))}
+                >
+                  <SelectTrigger className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-gray-900">
+                    <SelectValue placeholder="Any rating" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="highly-rated">Highly Rated (4.5+)</SelectItem>
+                    <SelectItem value="top-rated">Top Rated (4.0+)</SelectItem>
+                    <SelectItem value="well-rated">Well Rated (3.5+)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+              
               <div>
-                <Label htmlFor="checkout" className="block text-sm font-medium text-gray-700 mb-2">
-                  Check-out
+                <Label htmlFor="popularity" className="block text-sm font-medium text-gray-700 mb-2">
+                  Popularity
                 </Label>
-                <Input
-                  id="checkout"
-                  type="date"
-                  value={searchData.checkout}
-                  onChange={(e) => setSearchData(prev => ({ ...prev, checkout: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-gray-900"
-                />
+                <Select
+                  value={searchData.popularity}
+                  onValueChange={(value) => setSearchData(prev => ({ ...prev, popularity: value }))}
+                >
+                  <SelectTrigger className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-gray-900">
+                    <SelectValue placeholder="Any popularity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="most-popular">Most Popular</SelectItem>
+                    <SelectItem value="trending">Trending</SelectItem>
+                    <SelectItem value="new">New Arrivals</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+              
+              <div>
+                <Label htmlFor="purpose" className="block text-sm font-medium text-gray-700 mb-2">
+                  Purpose
+                </Label>
+                <Select
+                  value={searchData.purpose}
+                  onValueChange={(value) => setSearchData(prev => ({ ...prev, purpose: value }))}
+                >
+                  <SelectTrigger className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-gray-900">
+                    <SelectValue placeholder="Select purpose" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {purposes.map((purpose) => (
+                      <SelectItem key={purpose} value={purpose}>
+                        {purpose}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
               <div>
                 <Button
                   type="submit"
