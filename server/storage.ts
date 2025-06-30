@@ -1,9 +1,25 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { users, owners, ownerRequests, boats, bookings, contacts, type User, type InsertUser, type OwnerRequest, type InsertOwnerRequest, type Owner, type Boat, type InsertBoat, type Booking, type InsertBooking } from "@shared/schema";
+import {
+  users,
+  owners,
+  ownerRequests,
+  boats,
+  bookings,
+  contacts,
+  type User,
+  type InsertUser,
+  type OwnerRequest,
+  type InsertOwnerRequest,
+  type Owner,
+  type Boat,
+  type InsertBoat,
+  type Booking,
+  type InsertBooking
+} from "../shared/schema";
 import { eq, desc, inArray } from "drizzle-orm";
-import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 process.env.DATABASE_URL="postgresql://boat_rental_owner:npg_uA2vYrDzUm4K@ep-shiny-grass-a1oe4o4x-pooler.ap-southeast-1.aws.neon.tech/boat_rental?sslmode=require&channel_binding=require";
 process.env.SENDGRID_API_KEY="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";

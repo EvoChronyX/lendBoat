@@ -55,7 +55,13 @@ app.use((req, res, next) => {
       
       // Add user info if available
       if (req.user) {
-        logLine += ` [User: ${req.user.email}]`;
+        // Try to log email, username, or id if available
+        const userInfo = (req.user as any).email || (req.user as any).username || (req.user as any).id;
+        if (userInfo) {
+          logLine += ` [User: ${userInfo}]`;
+        } else {
+          logLine += ` [User: authenticated]`;
+        }
       }
       
       // Add response info for errors
