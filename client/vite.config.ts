@@ -5,16 +5,7 @@ import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 export default defineConfig({
   plugins: [
-    react(),
-    runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          // Use require to avoid top-level await and cross-package plugin type issues
-          require("@replit/vite-plugin-cartographer").cartographer(),
-        ]
-      : []),
-  ],
+    react(),],
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
