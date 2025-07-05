@@ -49,12 +49,83 @@
 }
 
 @layer base {
-  * {
-    @apply border;
+  /* CSS Reset - Remove all default margins, paddings, and borders */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: none;
+  }
+
+  html {
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    -moz-tab-size: 4;
+    tab-size: 4;
+    font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", Segoe UI Symbol, "Noto Color Emoji";
+    font-feature-settings: normal;
+    font-variation-settings: normal;
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    margin: 0;
+    line-height: inherit;
+    font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", Segoe UI Symbol, "Noto Color Emoji";
+    color: var(--foreground);
+    background-color: var(--background);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Remove default margins from headings */
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  /* Remove default margins from paragraphs */
+  p {
+    margin: 0;
+  }
+
+  /* Remove default list styles */
+  ol, ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Remove default button styles */
+  button {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  /* Remove default input styles */
+  input, textarea, select {
+    font: inherit;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Remove default link styles */
+  a {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  /* Remove default table styles */
+  table {
+    text-indent: 0;
+    border-color: inherit;
+    border-collapse: collapse;
   }
 
   /* Custom styles for boat rental theme */
