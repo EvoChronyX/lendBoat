@@ -1,0 +1,19 @@
+[build]
+  # Build from the client directory
+  base = "client"
+  
+  # Build command
+  command = "npm install && npm run build"
+  
+  # Publish directory
+  publish = "dist"
+
+[build.environment]
+  # Set Node.js version
+  NODE_VERSION = "18"
+
+# Handle client-side routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200 
