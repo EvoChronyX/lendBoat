@@ -1,4 +1,5 @@
 import { apiRequest } from "./queryClient";
+import { buildApiUrl } from "./config";
 
 export interface User {
   id: number;
@@ -142,15 +143,15 @@ class AuthManager {
 export const authManager = new AuthManager();
 
 // Override apiRequest to include auth headers
-const originalApiRequest = apiRequest;
 export const authenticatedApiRequest = async (
   method: string,
   url: string,
   data?: unknown
 ): Promise<Response> => {
   const headers = authManager.getAuthHeaders();
+  const fullUrl = url.startsWith('http') ? url : buildApiUrl(url);
   
-  const res = await fetch(url, {
+  const res = await fetch(fullUrl, {
     method,
     headers: {
       ...(data ? { "Content-Type": "application/json" } : {}),

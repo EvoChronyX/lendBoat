@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage, PostgresStorage, initializeDummyData } from "./storage";
 import { authService, authenticateToken as authMiddleware, requireAdmin, requireOwner } from "./services/auth";
 import { emailService } from "./services/email";
-import { insertUserSchema, insertOwnerRequestSchema, insertBookingSchema } from "@shared/schema";
+import { insertUserSchema, insertBookingSchema } from "../shared/schema";
 import { z } from "zod";
 import "./types";
 import Stripe from "stripe";
@@ -14,6 +14,7 @@ import { NextFunction } from "express";
 import bcrypt from "bcryptjs";
 
 import dotenv from 'dotenv';
+import { stringify } from "querystring";
 dotenv.config();
 
 
@@ -55,7 +56,7 @@ if (!STRIPE_SECRET_KEY) {
   console.warn("⚠️ STRIPE_SECRET_KEY not found in environment variables - Stripe payments will not work");
 }
 
-const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2025-05-28.basil" }) : null;
+const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2025-06-30.basil" }) : null;
 
 // Owner request validation schema
 const ownerRequestSchema = z.object({
@@ -158,14 +159,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case 'booking-confirmation':
           emailSent = await emailService.sendBookingConfirmationEmail(
             email,
+            "Test Customer",
             {
-              customerName: "Test Customer",
+              bookingId: 123,
               boatName: "Test Boat",
-              location: "Test Location",
+              boatType: "Motorboat",
               checkinDate: "2024-01-15",
               checkoutDate: "2024-01-17",
               guests: 4,
-              totalAmount: "500.00"
+              totalAmount: "500.00",
+              location: "Test Location",
+              description: "A beautiful test boat",
+              ownerBusinessName: "Test Business",
+              ownerPhone: "123-456-7890",
+              ownerEmail: "owner@test.com"
             }
           );
           break;
@@ -422,7 +429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ownerId,
         password,
         // Legacy fields
-        taxId: requestData.taxId || null,
+
         businessLicense: requestData.businessLicense || null,
         insuranceCertificate: requestData.insuranceCertificate || null,
         marinaLocation: requestData.marinaLocation || null,
@@ -462,7 +469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         totalUsers: users.length,
-        approvedOwners: owners.filter(o => o.isApproved).length,
+        approvedOwners: owners.filter(o => o.status === "approved").length,
         pendingRequests: pendingRequests.length,
         totalBoats: boats.length,
       });
@@ -725,13 +732,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (rating && typeof rating === 'string') {
         switch (rating) {
           case 'highly-rated':
-            boats = boats.filter(boat => parseFloat(boat.rating) >= 4.5);
+            boats = boats.filter(boat => boat.rating && parseFloat(boat.rating) >= 4.5);
             break;
           case 'top-rated':
-            boats = boats.filter(boat => parseFloat(boat.rating) >= 4.0);
+            boats = boats.filter(boat => boat.rating && parseFloat(boat.rating) >= 4.0);
             break;
           case 'well-rated':
-            boats = boats.filter(boat => parseFloat(boat.rating) >= 3.5);
+            boats = boats.filter(boat => boat.rating && parseFloat(boat.rating) >= 3.5);
             break;
         }
       }
@@ -742,20 +749,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           case 'most-popular':
             // Sort by rating and then by creation date
             boats.sort((a, b) => {
-              const ratingDiff = parseFloat(b.rating) - parseFloat(a.rating);
+              const ratingA = a.rating ? parseFloat(a.rating) : 0;
+              const ratingB = b.rating ? parseFloat(b.rating) : 0;
+              const ratingDiff = ratingB - ratingA;
               if (ratingDiff !== 0) return ratingDiff;
-              return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+              const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+              const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+              return dateB - dateA;
             });
             break;
           case 'trending':
             // Sort by recent creation date
-            boats.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            boats.sort((a, b) => {
+              const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+              const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+              return dateB - dateA;
+            });
             break;
           case 'new':
             // Show boats created in the last 30 days
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            boats = boats.filter(boat => new Date(boat.createdAt) > thirtyDaysAgo);
+            boats = boats.filter(boat => boat.createdAt && new Date(boat.createdAt) > thirtyDaysAgo);
             break;
         }
       }
@@ -768,15 +783,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               boat.capacity >= 8 || 
               boat.type.toLowerCase().includes('yacht') ||
               boat.type.toLowerCase().includes('pontoon') ||
-              boat.description.toLowerCase().includes('party')
+              (boat.description && boat.description.toLowerCase().includes('party'))
             );
             break;
           case 'Business Meeting':
             boats = boats.filter(boat => 
               boat.type.toLowerCase().includes('yacht') ||
               boat.type.toLowerCase().includes('houseboat') ||
-              boat.description.toLowerCase().includes('business') ||
-              boat.description.toLowerCase().includes('corporate') ||
+              (boat.description && boat.description.toLowerCase().includes('business')) ||
+              (boat.description && boat.description.toLowerCase().includes('corporate')) ||
               boat.capacity >= 10
             );
             break;
@@ -785,16 +800,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               boat.type.toLowerCase().includes('yacht') ||
               boat.type.toLowerCase().includes('trawler') ||
               boat.type.toLowerCase().includes('houseboat') ||
-              boat.description.toLowerCase().includes('cruising') ||
-              boat.description.toLowerCase().includes('travel')
+              (boat.description && boat.description.toLowerCase().includes('cruising')) ||
+              (boat.description && boat.description.toLowerCase().includes('travel'))
             );
             break;
           case 'Fishing':
             boats = boats.filter(boat => 
               boat.type.toLowerCase().includes('fishing') ||
               boat.type.toLowerCase().includes('motorboat') ||
-              boat.description.toLowerCase().includes('fishing') ||
-              boat.description.toLowerCase().includes('fish')
+              (boat.description && boat.description.toLowerCase().includes('fishing')) ||
+              (boat.description && boat.description.toLowerCase().includes('fish'))
             );
             break;
           case 'Vacation':
@@ -802,31 +817,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
               boat.type.toLowerCase().includes('yacht') ||
               boat.type.toLowerCase().includes('catamaran') ||
               boat.type.toLowerCase().includes('houseboat') ||
-              boat.description.toLowerCase().includes('vacation') ||
-              boat.description.toLowerCase().includes('luxury')
+              (boat.description && boat.description.toLowerCase().includes('vacation')) ||
+              (boat.description && boat.description.toLowerCase().includes('luxury'))
             );
             break;
           case 'Wedding':
             boats = boats.filter(boat => 
               boat.capacity >= 20 || 
               boat.type.toLowerCase().includes('yacht') ||
-              boat.description.toLowerCase().includes('wedding') ||
-              boat.description.toLowerCase().includes('special occasions')
+              (boat.description && boat.description.toLowerCase().includes('wedding')) ||
+              (boat.description && boat.description.toLowerCase().includes('special occasions'))
             );
             break;
           case 'Corporate Event':
             boats = boats.filter(boat => 
               boat.capacity >= 15 || 
               boat.type.toLowerCase().includes('yacht') ||
-              boat.description.toLowerCase().includes('corporate') ||
-              boat.description.toLowerCase().includes('business')
+              (boat.description && boat.description.toLowerCase().includes('corporate')) ||
+              (boat.description && boat.description.toLowerCase().includes('business'))
             );
             break;
           case 'Family Trip':
             boats = boats.filter(boat => 
               (boat.capacity >= 6 && boat.capacity <= 12) ||
-              boat.description.toLowerCase().includes('family') ||
-              boat.description.toLowerCase().includes('family-friendly')
+              (boat.description && boat.description.toLowerCase().includes('family')) ||
+              (boat.description && boat.description.toLowerCase().includes('family-friendly'))
             );
             break;
           case 'Romantic Getaway':
@@ -834,8 +849,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               boat.capacity <= 4 ||
               boat.type.toLowerCase().includes('sailboat') ||
               boat.type.toLowerCase().includes('yacht') ||
-              boat.description.toLowerCase().includes('romantic') ||
-              boat.description.toLowerCase().includes('sunset')
+              (boat.description && boat.description.toLowerCase().includes('romantic')) ||
+              (boat.description && boat.description.toLowerCase().includes('sunset'))
             );
             break;
           case 'Adventure':
@@ -843,9 +858,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               boat.type.toLowerCase().includes('speedboat') ||
               boat.type.toLowerCase().includes('jet ski') ||
               boat.type.toLowerCase().includes('motorboat') ||
-              boat.description.toLowerCase().includes('adventure') ||
-              boat.description.toLowerCase().includes('thrill') ||
-              boat.description.toLowerCase().includes('adrenaline')
+              (boat.description && boat.description.toLowerCase().includes('adventure')) ||
+              (boat.description && boat.description.toLowerCase().includes('thrill')) ||
+              (boat.description && boat.description.toLowerCase().includes('adrenaline'))
             );
             break;
         }
@@ -898,21 +913,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const booking = await storage.createBooking(bookingData);
       
-      // Get boat and user details for email
+      // Get boat, user, and owner details for email
       const boat = await storage.getBoatById(booking.boatId);
       const user = req.user;
+      const owner = boat ? await storage.getOwnerById(boat.ownerId) : null;
 
-      if (boat && user) {
+      if (boat && user && owner && user.email) {
         try {
           // Send booking confirmation email
-          const emailSent = await emailService.sendBookingConfirmationEmail(user.email, {
-            customerName: `${user.firstName} ${user.lastName}`,
+          const emailSent = await emailService.sendBookingConfirmationEmail(user.email, `${user.firstName || ''} ${user.lastName || ''}`, {
+            bookingId: Number(booking.id),
             boatName: boat.name,
-            location: boat.location,
-            checkinDate: booking.checkinDate.toLocaleDateString(),
-            checkoutDate: booking.checkoutDate.toLocaleDateString(),
-            guests: booking.guests,
+            boatType: boat.type,
+            checkinDate: booking.checkinDate,
+            checkoutDate: booking.checkoutDate,
+            guests: Number(booking.guests),
             totalAmount: booking.totalAmount,
+            location: boat.location,
+            description: boat.description || "",
+            ownerBusinessName: owner.businessName,
+            ownerPhone: owner.phoneNumber,
+            ownerEmail: owner.email,
           });
           
           if (!emailSent) {
@@ -1028,11 +1049,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("No matching booking found, creating from session metadata...");
         try {
           matchingBooking = await storage.createBooking({
-            userId: Number(sessionMetadata.userId),
+            userId: sessionMetadata.userId,
             boatId: Number(sessionMetadata.boatId),
             checkinDate: sessionMetadata.checkinDate, // Keep as string
             checkoutDate: sessionMetadata.checkoutDate, // Keep as string
-            guests: Number(sessionMetadata.guests),
+            guests: sessionMetadata.guests,
             totalAmount: sessionMetadata.totalAmount,
             specialRequests: sessionMetadata.specialRequests || "",
           });
@@ -1083,18 +1104,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Send confirmation email if booking is confirmed and not already sent
-      if (matchingBooking.status === "confirmed") {
+      if (matchingBooking.status === "confirmed" && user.email) {
         try {
           await emailService.sendBookingConfirmationEmail(
             user.email,
-            `${user.firstName} ${user.lastName}`,
+            `${user.firstName || ''} ${user.lastName || ''}`,
             {
               bookingId: matchingBooking.id,
               boatName: boat.name,
               boatType: boat.type,
-              checkinDate: matchingBooking.checkinDate.toLocaleDateString(),
-              checkoutDate: matchingBooking.checkoutDate.toLocaleDateString(),
-              guests: matchingBooking.guests,
+              checkinDate: matchingBooking.checkinDate,
+              checkoutDate: matchingBooking.checkoutDate,
+              guests: Number(matchingBooking.guests),
               totalAmount: matchingBooking.totalAmount,
               location: boat.location,
               description: boat.description || "",
@@ -1232,16 +1253,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update status
       await storage.updateBookingOwnerStatus(bookingId, "accepted");
       // Send email to user
-      const user = await storage.getUserById(booking.userId);
-      if (user) {
+      const user = await storage.getUserById(Number(booking.userId));
+      if (user && user.email) {
         await emailService.sendBookingStatusEmail(
           user.email,
-          `${user.firstName} ${user.lastName}`,
+          `${user.firstName || ''} ${user.lastName || ''}`,
           boat.name,
           "accepted",
           {
-            checkinDate: booking.checkinDate.toLocaleDateString(),
-            checkoutDate: booking.checkoutDate.toLocaleDateString(),
+            checkinDate: booking.checkinDate,
+            checkoutDate: booking.checkoutDate,
             guests: booking.guests,
             totalAmount: booking.totalAmount,
           }
@@ -1268,16 +1289,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update status
       await storage.updateBookingOwnerStatus(bookingId, "declined");
       // Send email to user
-      const user = await storage.getUserById(booking.userId);
-      if (user) {
+      const user = await storage.getUserById(Number(booking.userId));
+      if (user && user.email) {
         await emailService.sendBookingStatusEmail(
           user.email,
-          `${user.firstName} ${user.lastName}`,
+          `${user.firstName || ''} ${user.lastName || ''}`,
           boat.name,
           "declined",
           {
-            checkinDate: booking.checkinDate.toLocaleDateString(),
-            checkoutDate: booking.checkoutDate.toLocaleDateString(),
+            checkinDate: booking.checkinDate,
+            checkoutDate: booking.checkoutDate,
             guests: booking.guests,
             totalAmount: booking.totalAmount,
           }
@@ -1417,10 +1438,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           boatType: boatType || '',
           capacity: capacity || '',
           days: days.toString(),
-          customerName: `${req.user.firstName} ${req.user.lastName}`,
-          customerEmail: req.user.email,
+          customerName: `${req.user.firstName || ''} ${req.user.lastName || ''}`,
+          customerEmail: req.user.email || '',
         },
-        customer_email: req.user.email,
+        customer_email: req.user.email || '',
         billing_address_collection: 'required',
         shipping_address_collection: {
           allowed_countries: ['US', 'CA', 'GB', 'AU', 'IN'],
@@ -1456,32 +1477,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         // Create booking from successful checkout session
         const booking = await storage.createBooking({
-          userId: Number(metadata.userId),
+          userId: metadata.userId,
           boatId: Number(metadata.boatId),
-          checkinDate: new Date(metadata.checkinDate),
-          checkoutDate: new Date(metadata.checkoutDate),
-          guests: Number(metadata.guests),
+          checkinDate: metadata.checkinDate,
+          checkoutDate: metadata.checkoutDate,
+          guests: metadata.guests,
           totalAmount: metadata.totalAmount,
           specialRequests: metadata.specialRequests || "",
         });
 
         // Get boat and user details for email
         const boat = await storage.getBoatById(booking.boatId);
-        const user = await storage.getUserById(booking.userId);
+        const user = await storage.getUserById(Number(booking.userId));
 
-        if (boat && user) {
+        if (boat && user && user.email) {
           try {
             // Send booking confirmation email
             const emailSent = await emailService.sendBookingConfirmationEmail(
               user.email,
-              `${user.firstName} ${user.lastName}`,
+              `${user.firstName || ''} ${user.lastName || ''}`,
               {
                 bookingId: booking.id,
                 boatName: boat.name,
                 boatType: boat.type,
-                checkinDate: booking.checkinDate.toLocaleDateString(),
-                checkoutDate: booking.checkoutDate.toLocaleDateString(),
-                guests: booking.guests,
+                checkinDate: booking.checkinDate,
+                checkoutDate: booking.checkoutDate,
+                guests: Number(booking.guests),
                 totalAmount: booking.totalAmount,
                 location: boat.location,
                 description: boat.description || "",
@@ -1537,10 +1558,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create the booking
       const booking = await storage.createBooking({
-        userId: req.user.userId,
+        userId: req.user.userId.toString(),
         boatId: bookingData.boatId,
-        checkinDate: new Date(bookingData.checkinDate),
-        checkoutDate: new Date(bookingData.checkoutDate),
+        checkinDate: bookingData.checkinDate,
+        checkoutDate: bookingData.checkoutDate,
         guests: bookingData.guests,
         totalAmount: bookingData.totalAmount.toString(),
         specialRequests: bookingData.specialRequests || "",
@@ -1549,27 +1570,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get boat details for email
       const boat = await storage.getBoatById(booking.boatId);
 
-      if (boat) {
-        try {
-          // Send booking confirmation email
-          const emailSent = await emailService.sendBookingConfirmationEmail(
-            req.user.email,
-            `${req.user.firstName} ${req.user.lastName}`,
-            {
-              bookingId: booking.id,
-              boatName: boat.name,
-              boatType: boat.type,
-              checkinDate: booking.checkinDate.toLocaleDateString(),
-              checkoutDate: booking.checkoutDate.toLocaleDateString(),
-              guests: booking.guests,
-              totalAmount: booking.totalAmount,
-              location: boat.location,
-              description: boat.description || "",
-              ownerBusinessName: "Boat Rental Pro",
-              ownerPhone: "+1-555-0123",
-              ownerEmail: "support@boatrentalpro.com",
-            }
-          );
+              if (boat && req.user && req.user.email) {
+          try {
+            // Send booking confirmation email
+            const emailSent = await emailService.sendBookingConfirmationEmail(
+              req.user.email,
+              `${req.user.firstName || ''} ${req.user.lastName || ''}`,
+              {
+                bookingId: booking.id,
+                boatName: boat.name,
+                boatType: boat.type,
+                checkinDate: booking.checkinDate,
+                checkoutDate: booking.checkoutDate,
+                guests: Number(booking.guests),
+                totalAmount: booking.totalAmount,
+                location: boat.location,
+                description: boat.description || "",
+                ownerBusinessName: "Boat Rental Pro",
+                ownerPhone: "+1-555-0123",
+                ownerEmail: "support@boatrentalpro.com",
+              }
+            );
           
           if (!emailSent) {
             console.warn(`⚠️ Failed to send booking confirmation email to ${req.user.email}`);
@@ -1758,7 +1779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create the owner
       const newOwner = await storage.createOwner({
-        userId: ownerRequest.userId,
+        userId: ownerRequest.userId || 0,
         firstName: ownerRequest.firstName,
         lastName: ownerRequest.lastName,
         email: ownerRequest.email,
@@ -1789,7 +1810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Update user role to owner
-      await storage.updateUserRole(ownerRequest.userId, "owner");
+      await storage.updateUserRole(ownerRequest.userId || 0, "owner");
 
       // Update owner request status
       await storage.updateOwnerRequest(requestId, { 
@@ -1894,7 +1915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerName,
           originalSubject,
           replyMessage,
-          adminName: req.user.firstName
+          adminName: req.user?.firstName || 'none'
         });
 
         if (emailSent) {
@@ -2052,16 +2073,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send status update email to user
       const user = await storage.getUserById(parseInt(booking.userId));
-      if (user) {
+      if (user && user.email) {
         try {
           const emailSent = await emailService.sendBookingStatusEmail(
             user.email,
-            `${user.firstName} ${user.lastName}`,
+            `${user.firstName || ''} ${user.lastName || ''}`,
             boat.name,
             status,
             {
-              checkinDate: booking.checkinDate.toLocaleDateString(),
-              checkoutDate: booking.checkoutDate.toLocaleDateString(),
+              checkinDate: booking.checkinDate,
+              checkoutDate: booking.checkoutDate,
               guests: booking.guests,
               totalAmount: booking.totalAmount,
             }

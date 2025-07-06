@@ -1,9 +1,9 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { Secret, SignOptions } from 'jsonwebtoken';
 import { storage } from '../storage';
-import type { User } from '@shared/schema';
+import type { User } from '../../shared/schema';
 
-import type { Secret } from 'jsonwebtoken';
+// Secret and expiration time configuration
 const JWT_SECRET: Secret = process.env.JWT_SECRET || process.env.AUTH_SECRET || 'fallback-secret-key';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
@@ -26,13 +26,15 @@ class JWTAuthService implements AuthService {
 
   generateToken(user: User): string {
     return jwt.sign(
-      { 
-        userId: user.userId, 
-        email: user.email, 
-        role: user.role 
+      {
+        userId: user.userId,
+        email: user.email,
+        role: user.role,
       },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      JWT_SECRET as string,
+      {
+        expiresIn: JWT_EXPIRES_IN,
+      } as SignOptions // ✅ TypeScript fix: cast as SignOptions
     );
   }
 
@@ -57,13 +59,11 @@ class JWTAuthService implements AuthService {
 
 export const authService = new JWTAuthService();
 
-// Middleware for authentication
+// ───────────────────────────────────────────
+// ✅ Middleware: Authenticate JWT Token
 export const authenticateToken = async (req: any, res: any, next: any) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-
-  console.log('Auth Header:', authHeader);
-  console.log('Token:', token);
 
   if (!token) {
     console.warn('No token provided');
@@ -72,9 +72,7 @@ export const authenticateToken = async (req: any, res: any, next: any) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    console.log('Decoded JWT:', decoded);
     const user = await storage.getUserById(decoded.userId);
-    console.log('User from DB:', user);
     if (!user) {
       return res.status(403).json({ message: 'Invalid or expired token (user not found)' });
     }
@@ -86,7 +84,8 @@ export const authenticateToken = async (req: any, res: any, next: any) => {
   }
 };
 
-// Middleware for admin authentication
+// ───────────────────────────────────────────
+// ✅ Middleware: Admin-only Route
 export const requireAdmin = (req: any, res: any, next: any) => {
   if (req.user?.role !== 'admin') {
     return res.status(403).json({ message: 'Admin access required' });
@@ -94,7 +93,7 @@ export const requireAdmin = (req: any, res: any, next: any) => {
   next();
 };
 
-// Middleware for owner authentication
+// ✅ Middleware: Owner or Admin Route
 export const requireOwner = (req: any, res: any, next: any) => {
   if (req.user?.role !== 'owner' && req.user?.role !== 'admin') {
     return res.status(403).json({ message: 'Owner access required' });

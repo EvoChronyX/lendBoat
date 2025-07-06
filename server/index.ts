@@ -1,16 +1,19 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import path from "node:path";
 import "./types";
 import { initializeDummyData } from "./storage";
 
+// Load environment variables
+import dotenv from 'dotenv';
+dotenv.config();
 
-process.env.JWT_SECRET="sF8rLrZjdnUBVZ9E3mBtU8W6gFeTX2QwQrFjaVYPLD93gvYcZzM7vGpkRkMVRZTx"
-process.env.AUTH_SECRET="xr23MDk9LpB57QvTtMwz8nNbL1Cqg5ZfU6HyEo7Vm2AsWnBdKjRpYxFcGeHzNjLu"
-
-
-process.env.SENDGRID_API_KEY="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"
-process.env.EMAIL_API_KEY="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"
+// Set default environment variables if not provided
+process.env.JWT_SECRET = process.env.JWT_SECRET || "sF8rLrZjdnUBVZ9E3mBtU8W6gFeTX2QwQrFjaVYPLD93gvYcZzM7vGpkRkMVRZTx";
+process.env.AUTH_SECRET = process.env.AUTH_SECRET || "xr23MDk9LpB57QvTtMwz8nNbL1Cqg5ZfU6HyEo7Vm2AsWnBdKjRpYxFcGeHzNjLu";
+process.env.SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "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";
+process.env.EMAIL_API_KEY = process.env.EMAIL_API_KEY || "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";
 
 // Load environment variables with better error handling
 const requiredEnvVars = ['DATABASE_URL'];
@@ -29,6 +32,17 @@ console.log(`JWT_SECRET: ${process.env.JWT_SECRET || process.env.AUTH_SECRET ? '
 console.log(`SENDGRID_API_KEY: ${process.env.SENDGRID_API_KEY || process.env.EMAIL_API_KEY ? '✅ Set' : '❌ Missing'}`);
 
 const app = express();
+
+// CORS configuration for production
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://lendboat.netlify.app', 'http://localhost:5173'] // Add your Netlify domain
+    : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:5000'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 
 // Enhanced middleware for better error handling and logging
 app.use(express.json({ limit: '10mb' }));
@@ -79,7 +93,7 @@ app.use((req, res, next) => {
       } else if (res.statusCode >= 400) {
         console.warn(`🟡 ${logLine}`);
       } else {
-        log(logLine);
+        console.log(`🟢 ${logLine}`);
       }
     }
   });
@@ -111,7 +125,6 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
 
 (async () => {
   try {
-
     await initializeDummyData();
 
     // Register all routes and initialize the server
@@ -119,29 +132,26 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     
     console.log('✅ Routes registered successfully');
 
-    // Setup Vite or static serving based on environment
-    if (app.get("env") === "development") {
-      console.log('🔧 Setting up Vite development server...');
-      await setupVite(app, server);
-      console.log('✅ Vite development server ready');
+    // Production setup - serve static files if they exist
+    if (app.get("env") === "production") {
+      console.log('📦 Production mode - API server only');
     } else {
-      console.log('📦 Setting up static file serving...');
-      serveStatic(app);
-      console.log('✅ Static files ready');
+      console.log('🔧 Development mode active');
     }
 
     // Start the server
-    const port = 5000;
+    const port = process.env.PORT || 5000;
     server.listen({
-      port,
+      port: parseInt(port.toString()),
       host: "0.0.0.0",
-      reusePort: true,
     }, () => {
-      console.log(`🚀 BoatRental server running on port ${port}`);
-      console.log(`🌐 Access the application at: http://localhost:${port}`);
+      console.log(`🚀 BoatRental API server running on port ${port}`);
+      console.log(`🌐 API available at: http://localhost:${port}`);
       
       if (app.get("env") === "development") {
         console.log('🔧 Development mode active - Hot reload enabled');
+      } else {
+        console.log('🚀 Production mode active');
       }
     });
 

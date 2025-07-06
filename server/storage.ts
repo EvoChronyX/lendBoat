@@ -74,7 +74,7 @@ type InsertOwner = {
 
 export interface IStorage {
   // User management
-  createUser(user: InsertUser): Promise<User>;
+  createUser(user: Omit<InsertUser, 'userId'>): Promise<User>;
   getUserById(id: number): Promise<User | null>;
   getUserByEmail(email: string): Promise<User | null>;
   updateUser(id: number, updates: Partial<User>): Promise<User | null>;
@@ -159,7 +159,7 @@ export interface IStorage {
 
 export class PostgresStorage implements IStorage {
   // Users
-  async createUser(user: InsertUser): Promise<User> {
+  async createUser(user: Omit<InsertUser, 'userId'>): Promise<User> {
     // Generate a unique userId
     const userId = Math.floor(Math.random() * 1000000) + 1000000;
     const [newUser] = await db.insert(users).values({ ...user, userId }).returning();

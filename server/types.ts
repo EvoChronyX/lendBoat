@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import { User } from '@shared/schema';
+import { User } from '../shared/schema';
 
 declare global {
   namespace Express {

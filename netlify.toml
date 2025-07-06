@@ -16,4 +16,8 @@
 [[redirects]]
   from = "/*"
   to = "/index.html"
-  status = 200 
+  status = 200
+
+# Environment variables for frontend
+[build.environment]
+  NODE_ENV = "production" 
