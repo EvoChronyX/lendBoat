@@ -6,11 +6,11 @@ export const API_CONFIG = {
   },
   // Production - Render backend
   production: {
-    baseURL: process.env.VITE_API_URL || 'https://your-render-app.onrender.com', // Replace with your Render URL
+    baseURL: import.meta.env.VITE_API_URL || 'https://lendboat.onrender.com', // Replace with your Render URL
   },
   // Staging - can be used for testing
   staging: {
-    baseURL: process.env.VITE_API_URL || 'https://your-staging-app.onrender.com',
+    baseURL: import.meta.env.VITE_API_URL || 'https://your-staging-app.onrender.com',
   }
 };
 
