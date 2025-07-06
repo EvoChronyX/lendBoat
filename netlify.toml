@@ -2,8 +2,8 @@
   # Build from the client directory
   base = "client"
   
-  # Build command
-  command = "npm install && npm run build"
+  # Build command - install all dependencies including dev dependencies
+  command = "npm install --include=dev && npm run build"
   
   # Publish directory
   publish = "dist"
@@ -12,6 +12,7 @@
   # Set Node.js version
   NODE_VERSION = "18"
   NODE_ENV = "production"
+  NPM_CONFIG_PRODUCTION = "false"
 
 # Handle client-side routing
 [[redirects]]
