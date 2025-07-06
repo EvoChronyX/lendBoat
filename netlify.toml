@@ -11,13 +11,10 @@
 [build.environment]
   # Set Node.js version
   NODE_VERSION = "18"
+  NODE_ENV = "production"
 
 # Handle client-side routing
 [[redirects]]
   from = "/*"
   to = "/index.html"
-  status = 200
-
-# Environment variables for frontend
-[build.environment]
-  NODE_ENV = "production" 
+  status = 200 
